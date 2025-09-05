@@ -1,0 +1,15 @@
+const express = require('express');
+const router = express.Router();
+const User = require('../model/user');
+
+router.get('/', (req, res) => {
+    res.send("User route is working");
+})
+router.get('/login', (req, res) => {
+    res.render('login');
+})
+router.get('/forgot', (req, res) => {
+    res.render('forgot');
+})
+
+module.exports = router;
