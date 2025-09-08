@@ -8,9 +8,9 @@ const auth = require('../middleware/auth')
 
 router.get('/', auth, async (req, res) => {
     const messages = await Message.find().populate('sender', 'username').sort({ createdAt: -1 });
+    const Users = await User.find({_id: { $ne: req.user._id }});
 
-
-    res.render('index', { messages, userId: req.user._id });
+    res.render('index', { messages, userId: req.user._id, users: Users });
 })
 router.get('/login', (req, res) => {
     res.render('login');

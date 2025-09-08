@@ -23,9 +23,14 @@
         </div>
         <div class="flex-1 overflow-y-auto">
             <ul>
-                <li class="p-3 hover:bg-gray-100 cursor-pointer border-b">Project A</li>
-                <li class="p-3 hover:bg-gray-100 cursor-pointer border-b">Hackathon</li>
-                <li class="p-3 hover:bg-gray-100 cursor-pointer border-b">Friends</li>
+                <% users.forEach((user)=> {%>
+                    <li onclick="selectUser(this,'<%= user._id %>')"
+                        class="p-3 hover:bg-gray-100 cursor-pointer border-b">
+                        <%=user.username%>
+                    </li>
+                    <%});%>
+
+
             </ul>
         </div>
     </aside>
@@ -33,8 +38,8 @@
 
     <main class="flex-1 flex flex-col">
 
-        <div class="p-4 border-b bg-white shadow-sm font-semibold">
-            Group: Project A
+        <div id="RoomName" class="p-4 border-b bg-white shadow-sm font-semibold" other_user_id="">
+            None
         </div>
 
 
@@ -80,6 +85,7 @@
         const input = document.getElementById("messageInput");
         const messagesDiv = document.getElementById("messages");
         const userId = "<%= userId %>";
+        let otherId = document.getElementById("RoomName").getAttribute("other_user_id");
         const socket = io({
             auth: {
                 token: '<%= userId %>'
@@ -87,13 +93,14 @@
         });
 
 
+
+
         socket.on('chat message', (msg) => {
 
             const wrapper = document.createElement("div");
             wrapper.classList.add("flex", "mb-2");
-            console.log(msg)
-            console.log(userId)
-            if (msg.userId.toString() === userId.toString()) {
+
+            if (msg.sender.toString() === userId.toString()) {
                 wrapper.classList.add("justify-end");
             } else {
                 wrapper.classList.add("justify-start");
@@ -108,14 +115,14 @@
                 "md:max-w-md"
             );
 
-            if (msg.userId.toString() === userId.toString()) {
+            if (msg.sender.toString() === userId.toString()) {
 
                 msgDiv.classList.add("bg-indigo-500", "text-white", "rounded-br-none");
             } else {
                 msgDiv.classList.add("bg-white", "text-gray-800", "rounded-bl-none");
             }
 
-            msgDiv.textContent = msg.msg;
+            msgDiv.textContent = msg.message;
 
             wrapper.appendChild(msgDiv);
             messagesDiv.appendChild(wrapper);
@@ -127,7 +134,7 @@
             const text = input.value.trim();
             if (!text) return;
 
-            socket.emit('chat message', input.value);
+            socket.emit('chat message', { message: text, sender: userId, receiver: otherId });
             input.value = '';
 
             fetch('/message', {
@@ -143,6 +150,16 @@
                 })
                 .catch(error => console.error('Error:', error));
         });
+
+        function selectUser(element, id) {
+            otherId = id;
+
+            document.getElementById("RoomName").innerText = element ? element.innerText : "None";
+            document.getElementById("RoomName").setAttribute("other_user_id", id);
+            messagesDiv.innerHTML = '';
+            console.log({ userId, otherId });
+            socket.emit('joinRoom', { userId, otherId });
+        }
 
 
 

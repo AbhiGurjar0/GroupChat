@@ -22,9 +22,14 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
 
+    socket.on('joinRoom', (Id) => {
+        let roomId = [Id.userId, Id.otherId].sort().join('_');
+        socket.join(roomId);
+        console.log(`User ${Id.userId} joined room ${roomId}`);
+    });
     socket.on('chat message', (msg) => {
-
-        io.emit("chat message", { msg, userId: socket.userId });
+        const roomId = [msg.sender, msg.receiver].sort().join('_');
+        io.to(roomId).emit('chat message', msg);
     });
     console.log('a user connected');
 });
