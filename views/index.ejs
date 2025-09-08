@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Group Chat</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body class="h-screen flex bg-gray-100">
@@ -29,20 +30,38 @@
         </div>
     </aside>
 
-    <!-- Chat Section -->
+
     <main class="flex-1 flex flex-col">
-        <!-- Header -->
+
         <div class="p-4 border-b bg-white shadow-sm font-semibold">
             Group: Project A
         </div>
 
-        <!-- Messages -->
-        <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
 
+        <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 ">
+            <% if (messages.length===0) { %>
+                <div class="text-gray-500 text-center mt-10">No messages yet. Start the conversation!</div>
+                <% } else { %>
+                    <div class="flex flex-col gap-3">
+                        <% messages.reverse().forEach((msg)=> { %>
 
+                            <div
+                                class="flex <%= msg.sender._id.toString() === userId.toString() ? 'justify-end' : 'justify-start' %>">
+                                <div class="p-3 rounded-lg shadow-sm max-w-md 
+                      <%= msg.sender._id.toString() === userId.toString() 
+                          ? 'bg-indigo-500 text-white rounded-br-none' 
+                          : 'bg-white text-gray-800 rounded-bl-none' %>">
+                                    <%= msg.message %>
+
+                                </div>
+                            </div>
+                            <% }) %>
+                    </div>
+                    <% } %>
         </div>
 
-        <!-- Input Box -->
+
+
         <div class="p-4 bg-white border-t flex gap-2">
             <input id="messageInput" type="text" placeholder="Type a message..."
                 class="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400" />
@@ -60,10 +79,47 @@
         const sendBtn = document.getElementById("sendBtn");
         const input = document.getElementById("messageInput");
         const messagesDiv = document.getElementById("messages");
+        const socket = io();
+
+
+        socket.on("chat message", (msg) => {
+            const wrapper = document.createElement("div");
+            wrapper.classList.add("flex", "mb-2");
+
+            if (msg.userId === myUserId) {
+                wrapper.classList.add("justify-end");
+            } else {
+                wrapper.classList.add("justify-start");
+            }
+
+            const msgDiv = document.createElement("div");
+            msgDiv.classList.add(
+                "p-3",
+                "rounded-lg",
+                "shadow-sm",
+                "max-w-xs",
+                "md:max-w-md"
+            );
+
+            if (msg.userId === myUserId) {
+                msgDiv.classList.add("bg-indigo-500", "text-white");
+            } else {
+                msgDiv.classList.add("bg-white", "text-gray-800");
+            }
+
+            msgDiv.textContent = msg.message;
+            wrapper.appendChild(msgDiv);
+            messagesDiv.appendChild(wrapper);
+
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
 
         sendBtn.addEventListener("click", () => {
             const text = input.value.trim();
             if (!text) return;
+
+            socket.emit('chat message', input.value);
+            input.value = '';
 
             fetch('/message', {
                 method: 'POST',
@@ -74,47 +130,17 @@
             })
                 .then(response => response.json())
                 .then(data => {
-                    const msgEl = document.createElement("div");
-                    msgEl.className = "flex justify-end";
-                    msgEl.innerHTML = `
-                    <div class="px-4 py-2 rounded-2xl max-w-xs shadow-sm text-sm bg-blue-500 text-white">
-          <span class="block font-semibold text-xs opacity-70">You</span>
-          ${text}
-        </div>
-      `;
-                    messagesDiv.appendChild(msgEl);
-                    input.value = "";
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                });
-            // fetchMessages();
+                    console.log('Message sent:', data);
+                })
+                .catch(error => console.error('Error:', error));
         });
 
-        function fetchMessages() {
-            let messagesDiv = document.getElementById("messages");
-            fetch('/messages')
-                .then(response => response.json())
-                .then(data => {
-                    console.log(data);
-                    messagesDiv.innerHTML = '';
-                    data.forEach(msg => {
-                        const msgEl = document.createElement("div");
-                        // msgEl.className = msg.sender === 'You' ? "flex justify-end" : "flex justify-start";
-                        msgEl.innerHTML = `
-            <div class="px-4 py-2 rounded-2xl max-w-xs shadow-sm text-sm ${msg.sender === 'You' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}">
-              <span class="block font-semibold text-xs opacity-70">${msg.sender}</span>
-              ${msg.message}                                                                                                                            
-            </div>
-          `;
-                        messagesDiv.appendChild(msgEl);
-                    });
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                });
-        }
-        fetchMessages()
-        // setInterval(fetchMessages, 2000);
+
 
 
     </script>
+
+
 </body>
 
 </html>

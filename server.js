@@ -1,11 +1,26 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const { createServer } = require('node:http');
 const userRoutes = require('./routes/userRoutes');
 const db = require('./src/db/db');
 const app = express();
 const ejs = require('ejs');
 const cookieParser = require('cookie-parser');
+const server = createServer(app);
+const { Server } = require('socket.io');
+const io = new Server(server);
+io.on('connection', (socket) => {
+   
+    socket.on('chat message', (msg) => {
+        let data = {
+            userId: socket.id,
+            message: msg
+        };
+        io.emit("chat message", data);
+    });
+    console.log('a user connected');
+});
 
 app.use(cookieParser());
 
@@ -19,6 +34,6 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use('/', userRoutes);
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

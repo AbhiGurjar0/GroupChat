@@ -5,9 +5,12 @@ const Message = require('../model/message');
 const { registerUser, loginUser } = require('../controller/userController');
 const auth = require('../middleware/auth')
 
-router.get('/', auth, (req, res) => {
 
-    res.render('index');
+router.get('/', auth, async (req, res) => {
+    const messages = await Message.find().populate('sender', 'username').sort({ createdAt: -1 });
+
+
+    res.render('index', { messages , userId: req.user._id });
 })
 router.get('/login', (req, res) => {
     res.render('login');
