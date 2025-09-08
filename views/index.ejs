@@ -79,14 +79,21 @@
         const sendBtn = document.getElementById("sendBtn");
         const input = document.getElementById("messageInput");
         const messagesDiv = document.getElementById("messages");
-        const socket = io();
+        const userId = "<%= userId %>";
+        const socket = io({
+            auth: {
+                token: '<%= userId %>'
+            }
+        });
 
 
-        socket.on("chat message", (msg) => {
+        socket.on('chat message', (msg) => {
+
             const wrapper = document.createElement("div");
             wrapper.classList.add("flex", "mb-2");
-
-            if (msg.userId === myUserId) {
+            console.log(msg)
+            console.log(userId)
+            if (msg.userId.toString() === userId.toString()) {
                 wrapper.classList.add("justify-end");
             } else {
                 wrapper.classList.add("justify-start");
@@ -101,13 +108,15 @@
                 "md:max-w-md"
             );
 
-            if (msg.userId === myUserId) {
-                msgDiv.classList.add("bg-indigo-500", "text-white");
+            if (msg.userId.toString() === userId.toString()) {
+
+                msgDiv.classList.add("bg-indigo-500", "text-white", "rounded-br-none");
             } else {
-                msgDiv.classList.add("bg-white", "text-gray-800");
+                msgDiv.classList.add("bg-white", "text-gray-800", "rounded-bl-none");
             }
 
-            msgDiv.textContent = msg.message;
+            msgDiv.textContent = msg.msg;
+
             wrapper.appendChild(msgDiv);
             messagesDiv.appendChild(wrapper);
 

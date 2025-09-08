@@ -10,14 +10,21 @@ const cookieParser = require('cookie-parser');
 const server = createServer(app);
 const { Server } = require('socket.io');
 const io = new Server(server);
+io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (token) {
+        socket.userId = token;
+        next();
+    } else {
+        next(new Error('Authentication error'));
+    }
+});
+
 io.on('connection', (socket) => {
-   
+
     socket.on('chat message', (msg) => {
-        let data = {
-            userId: socket.id,
-            message: msg
-        };
-        io.emit("chat message", data);
+
+        io.emit("chat message", { msg, userId: socket.userId });
     });
     console.log('a user connected');
 });
