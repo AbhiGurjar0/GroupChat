@@ -21,7 +21,7 @@ router.post('/createGroup', auth, async (req, res) => {
 
         const group = await Group.create({
             name,
-            members: [req.user._id]   
+            members: [req.user._id]
         });
 
         res.json({
@@ -36,6 +36,7 @@ router.post('/createGroup', auth, async (req, res) => {
 
 router.get('/:otherId', auth, async (req, res) => {
     let userId = req.user._id;
+    const user = await User.findOne({ _id: userId });
     let otherId = req.params.otherId;
     const messages = await Message.find(
         {
@@ -49,7 +50,7 @@ router.get('/:otherId', auth, async (req, res) => {
     ).populate('sender', 'username').sort({ createdAt: -1 });
     const Users = await User.find({ _id: { $ne: req.user._id } });
 
-    res.render('chats', { messages, userId: req.user._id, users: Users });
+    res.render('chat', { messages, userId: req.user._id, users: Users, user });
 
 
 

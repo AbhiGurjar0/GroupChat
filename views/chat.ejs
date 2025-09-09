@@ -11,51 +11,36 @@
 
 <body class="h-screen flex bg-gray-100">
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white shadow-lg border-r flex flex-col">
-        <div class="p-4 font-bold text-lg border-b flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 20h5v-2a4 4 0 00-5-4M9 20H4v-2a4 4 0 015-4m7-4v4m0 0v4m0-4h4m-4 0H7" />
-            </svg>
-            Groups
-        </div>
-        <div class="flex-1 overflow-y-auto">
-            <ul>
-                <% users.forEach((user)=> {%>
-                    <a href="/<%=user._id%>">
-                        <li onclick="selectUser(this,'<%= user._id %>')"
-                            class="p-3 hover:bg-gray-100 cursor-pointer border-b">
-                            <%=user.username%>
-                        </li>
-                    </a>
-                    <%});%>
-                        <% group.forEach((grp)=> {%>
-                            <li onclick="selectGroup(this,'<%= grp._id %>',2)"
-                                class="p-3 hover:bg-gray-100 cursor-pointer border-b ">
-                                <%=grp.name%>
-                            </li>
-                            <%});%>
 
-
-            </ul>
-        </div>
-    </aside>
 
 
     <main class="flex-1 flex flex-col">
 
         <div id="RoomName" class="p-4 border-b bg-white shadow-sm font-semibold" other_user_id="" chatType="">
-            None
+            <%= user.username%>
         </div>
 
 
-        <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 ">
-
-            <div class="text-gray-500 text-center mt-10">No messages yet. Start the conversation!</div>
-
+        <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+            <% messages.forEach((msg)=> { %>
+                <% if (msg.sender.toString()===userId.toString()) { %>
+                    
+                    <div class="flex justify-end">
+                        <div class="max-w-xs bg-blue-500 text-white px-4 py-2 rounded-2xl shadow-md">
+                            <%= msg.message %>
+                        </div>
+                    </div>
+                    <% } else { %>
+                        
+                        <div class="flex justify-start">
+                            <div class="max-w-xs bg-gray-200 text-gray-800 px-4 py-2 rounded-2xl shadow-md">
+                                <%= msg.message %>
+                            </div>
+                        </div>
+                        <% } %>
+                            <% }) %>
         </div>
+
 
 
 

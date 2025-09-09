@@ -6,7 +6,7 @@ const User = require('../model/user');
 
 const auth = async (req, res, next) => {
     const token = req.cookies.token;
-    
+
 
 
     try {
