@@ -11,6 +11,47 @@ const server = createServer(app);
 const { Server } = require('socket.io');
 const io = new Server(server);
 const Message = require('./model/message')
+const Archieve = require('./model/archieve');
+const { CronJob } = require('cron');
+
+const job = new CronJob(
+    '0 0 23 * * *', // every day at 11 PM
+    async function () {
+        try {
+
+            const messages = await Message.find();
+
+            if (messages.length === 0) return;
+
+            await Promise.all(messages.map(mes =>
+                Archieve.create({
+                    sender: mes.sender,
+                    receiver: mes.receiver,
+                    groupId: mes?.groupId,
+                    message: mes.message,
+                    type: mes.type,
+                    createdAt: mes.createdAt
+                })
+            ));
+
+
+            await Archieve.deleteMany({
+                createdAt: { $lt: new Date(new Date().setDate(new Date().getDate() - 1)) }
+            });
+
+
+            await Message.deleteMany();
+
+            console.log("Archived and cleared messages successfully");
+        } catch (err) {
+            console.error("Cron job failed:", err);
+        }
+    },
+    null, // onComplete
+    true, // start immediately
+    'America/Los_Angeles'
+);
+
 io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     if (token) {
@@ -51,7 +92,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('groupMessage', async (msg) => {
-       
+
         const { sender, groupId, message } = msg;
         await Message.create({
             message,

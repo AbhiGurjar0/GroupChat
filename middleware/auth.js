@@ -21,7 +21,7 @@ const auth = async (req, res, next) => {
     } catch (error) {
         console.error('Invalid token');
         return res.redirect('/login');
-        // return res.status(401).json({ error: 'Access denied. Invalid token.' });
+        
     }
 };
 

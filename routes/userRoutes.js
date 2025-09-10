@@ -5,6 +5,7 @@ const Message = require('../model/message');
 const { registerUser, loginUser } = require('../controller/userController');
 const auth = require('../middleware/auth');
 const Group = require('../model/group');
+const Archieve = require('../model/archieve');
 
 
 router.get('/', auth, async (req, res) => {
@@ -38,16 +39,30 @@ router.get('/:otherId', auth, async (req, res) => {
     let userId = req.user._id;
     const user = await User.findOne({ _id: userId });
     let otherId = req.params.otherId;
-    const messages = await Message.find(
-        {
-            $or: [
-                { sender: userId, receiver: otherId },
-                {
-                    sender: otherId, receiver: userId
-                }
-            ]
-        }
-    ).populate('sender', 'username').sort({ createdAt: -1 });
+    const liveMessages = await Message.find({
+        $or: [
+            { sender: userId, receiver: otherId },
+            { sender: otherId, receiver: userId }
+        ]
+    })
+        .populate('sender', 'username')
+        .sort({ createdAt: -1 });
+
+    const archivedMessages = await Archieve.find({
+        $or: [
+            { sender: userId, receiver: otherId },
+            { sender: otherId, receiver: userId }
+        ]
+    })
+        .populate('sender', 'username')
+        .sort({ createdAt: -1 });
+
+   
+    let messages = [...liveMessages, ...archivedMessages];
+
+
+    messages.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
     const Users = await User.find({ _id: { $ne: req.user._id } });
 
     res.render('chat', { messages, userId: req.user._id, users: Users, user });
