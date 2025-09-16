@@ -7,12 +7,14 @@ const db = require('./src/db/db');
 const app = express();
 const ejs = require('ejs');
 const cookieParser = require('cookie-parser');
-const server = createServer(app);
 const { Server } = require('socket.io');
+const server = createServer(app);
+
 const io = new Server(server);
 const Message = require('./model/message')
 const Archieve = require('./model/archieve');
 const { CronJob } = require('cron');
+const User = require('./model/user');
 
 const job = new CronJob(
     '0 0 23 * * *', // every day at 11 PM
@@ -51,16 +53,20 @@ const job = new CronJob(
     true, // start immediately
     'America/Los_Angeles'
 );
+// io.on('connection', (socket) => {
+//     console.log('a user connected');
+// });
 
-io.use((socket, next) => {
-    const token = socket.handshake.auth.token;
-    if (token) {
-        socket.userId = token;
-        next();
-    } else {
-        next(new Error('Authentication error'));
-    }
-});
+
+// io.use((socket, next) => {
+//     const token = socket.handshake.auth.token;
+//     if (token) {
+//         socket.userId = token;
+//         next();
+//     } else {
+//         next(new Error('Authentication error'));
+//     }
+// });
 
 io.on('connection', (socket) => {
     console.log('a user connected');
@@ -73,15 +79,24 @@ io.on('connection', (socket) => {
     });
 
     socket.on('chatMessage', async (msg) => {
+        console.log(msg);
         const roomId = [msg.sender, msg.receiver].sort().join('_');
-        console.log("private")
+        console.log(msg.sender + " " + msg.receiver);
         await Message.create({
             message: msg.message,
             sender: msg.sender,
             receiver: msg.receiver,
             type: "private"
         });
-        io.to(roomId).emit('chatMessage', msg);
+        const sender = await User.findById(msg.sender).select('_id username');
+        const newMessage = {
+            message: msg.message,
+            sender,           // now sender is { _id, username }
+            receiver: msg.receiver
+        };
+        io.emit('chatMessage', newMessage);
+
+        
     });
 
     // Group Chat
@@ -103,6 +118,9 @@ io.on('connection', (socket) => {
         io.to(groupId).emit('chatMessage', msg);
     });
 });
+io.on("connection_error", (err) => {
+    console.error("Socket connection error:", err.message);
+});
 
 app.use(cookieParser());
 app.get('/favicon.ico', (req, res) => res.status(204).end());
@@ -116,6 +134,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 app.use('/', userRoutes);
+
 
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

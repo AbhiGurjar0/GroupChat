@@ -24,12 +24,12 @@
         <div class="flex-1 overflow-y-auto">
             <ul>
                 <% users.forEach((user)=> {%>
-                    <a href="/<%=user._id%>">
-                        <li onclick="selectUser(this,'<%= user._id %>')"
-                            class="p-3 hover:bg-gray-100 cursor-pointer border-b">
-                            <%=user.username%>
-                        </li>
-                    </a>
+
+                    <li onclick="selectUser(this,'<%= user._id %>')"
+                        class="p-3 hover:bg-gray-100 cursor-pointer border-b">
+                        <%=user.username%>
+                    </li>
+
                     <%});%>
                         <% group.forEach((grp)=> {%>
                             <li onclick="selectGroup(this,'<%= grp._id %>',2)"
@@ -45,81 +45,85 @@
 
 
     <main class="flex-1 flex flex-col">
-
-        <div id="RoomName" class="p-4 border-b bg-white shadow-sm font-semibold" other_user_id="" chatType="">
-            None
-        </div>
-
-
-        <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 ">
-
-            <div class="text-gray-500 text-center mt-10">No messages yet. Start the conversation!</div>
-
-        </div>
+        <%if(selectedUser){%>
+            <div id="RoomName" class="p-4 border-b bg-white shadow-sm font-semibold"
+                other_user_id="<%=selectedUser._id%>" chatType="Private">
+                <%= selectedUser.username %>
+            </div>
+            <%}else{%>
+                <div id="RoomName" class="p-4 border-b bg-white shadow-sm font-semibold" other_user_id="" chatType="">
+                    None
+                </div>
 
 
+                <%}%>
 
-        <div class="p-4 bg-white border-t flex gap-2">
-            <input id="messageInput" type="text" placeholder="Type a message..."
-                class="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            <button id="sendBtn"
-                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-            </button>
-        </div>
+
+                    <section id="chatContainer"
+                        class="flex-1 px-8 py-6 min-h-[75vh] overflow-y-auto box-border space-y-8 bg-gray-50">
+
+                        <% messages.reverse().forEach(message=> {
+                            const isSender = message.sender._id.equals(selectedUser?._id); // current user is sender
+                            %>
+                            <div class="flex mb-2 <%= isSender ? 'justify-start' : 'justify-end' %> p-2">
+                                <div
+                                    class="<%= isSender ? 'bg-orange-400 text-white':'bg-green-400 text-black' %> px-4 py-2 rounded-xl max-w-md">
+                                    <p>
+                                        <%= message.message%>
+                                    </p>
+
+                                </div>
+                            </div>
+                            <% }) %>
+                    </section>
+
+
+                    <div class="p-4 bg-white border-t flex gap-2">
+                        <input id="messageInput" type="text" placeholder="Type a message..."
+                            class="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                        <button id="sendBtn"
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
+                    </div>
     </main>
 
     <script>
         const sendBtn = document.getElementById("sendBtn");
         const input = document.getElementById("messageInput");
-        const messagesDiv = document.getElementById("messages");
+        const messagesDiv = document.getElementById("chatContainer");
         const userId = "<%= userId %>";
         let otherId = document.getElementById("RoomName").getAttribute("other_user_id");
         const socket = io({
             auth: {
-                token: '<%= userId %>'
+                token: userId
             }
         });
+        socket.on("connect", () => console.log("Connected:", socket.id));
 
 
+        socket.on("chatMessage", (msg) => {
+            console.log(msg);
+            console.log("message is here")
+           const isSender = msg.sender._id !== userId;
+           console.log(isSender)
 
+            messagesDiv.innerHTML += `
+            <div class="flex mb-2 ${isSender ? 'justify-start' : 'justify-end'} p-2">
+                <div
+                    class="${isSender ? 'bg-orange-400 text-white' : 'bg-green-400 text-black'} px-4 py-2 rounded-xl max-w-md">
+                    <p>
+                        ${msg.message}
+                    </p>
 
-        socket.on('chatMessage', (msg) => {
+                </div>
+            </div>`;
 
-            const wrapper = document.createElement("div");
-            wrapper.classList.add("flex", "mb-2");
-
-            if (msg.sender.toString() === userId.toString()) {
-                wrapper.classList.add("justify-end");
-            } else {
-                wrapper.classList.add("justify-start");
-            }
-
-            const msgDiv = document.createElement("div");
-            msgDiv.classList.add(
-                "p-3",
-                "rounded-lg",
-                "shadow-sm",
-                "max-w-xs",
-                "md:max-w-md"
-            );
-
-            if (msg.sender.toString() === userId.toString()) {
-
-                msgDiv.classList.add("bg-indigo-500", "text-white", "rounded-br-none");
-            } else {
-                msgDiv.classList.add("bg-white", "text-gray-800", "rounded-bl-none");
-            }
-
-            msgDiv.textContent = msg.message;
-
-            wrapper.appendChild(msgDiv);
-            messagesDiv.appendChild(wrapper);
-
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            messagesDiv.scrollBottom = messagesDiv.scrollHeight;
         });
 
         sendBtn.addEventListener("click", () => {
@@ -127,38 +131,36 @@
             if (!text) return;
             let chatType = document.getElementById("RoomName").getAttribute('chatType');
             console.log({ text, chatType })
-            if (chatType === "Private") {
-                socket.emit("chatMessage", {
-                    message: text,
-                    sender: userId,
-                    receiver: otherId
-                });
-            } else if (chatType === "Group") {
-                console.log(otherId)
-                socket.emit("groupMessage", {
+            // if (chatType === "Private") {
+            socket.emit("chatMessage", {
+                message: text,
+                sender: userId,
+                receiver: otherId
+            });
+            // } else if (chatType === "Group") {
+            //     console.log(otherId)
+            //     socket.emit("groupMessage", {
 
-                    message: text,
-                    sender: userId,
-                    groupId: otherId
-                });
-            }
+            //         message: text,
+            //         sender: userId,
+            //         groupId: otherId
+            //     });
+            // }
 
             input.value = "";
 
         });
 
-        function selectUser(element, id) {
+        async function selectUser(element, id) {
             otherId = id;
-
-            document.getElementById("RoomName").innerText = element ? element.innerText : "None";
-            document.getElementById("RoomName").setAttribute("other_user_id", id);
-            document.getElementById("RoomName").setAttribute('chatType', "Private");
-            messagesDiv.innerHTML = '';
-
             socket.emit('joinRoom', { userId, otherId });
+            window.location.href = `/chat/${id}`;
         }
 
+
+
         function selectGroup(element, id) {
+
             otherId = id;
             groupId = id;
             document.getElementById("RoomName").innerText = element ? element.innerText : "None";
@@ -168,9 +170,6 @@
             // console.log({ userId, otherId });
             socket.emit('joinGroup', { userId, groupId });
         }
-
-
-
     </script>
 
 

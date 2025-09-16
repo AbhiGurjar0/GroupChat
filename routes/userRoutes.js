@@ -9,11 +9,9 @@ const Archieve = require('../model/archieve');
 
 
 router.get('/', auth, async (req, res) => {
-
     const Users = await User.find({ _id: { $ne: req.user._id } });
     const group = await Group.find();
-
-    res.render('index', { userId: req.user._id, users: Users, group });
+    res.render('index', { userId: req.user._id, users: Users, group, messages: [], user: req.user ,selectedUser:null});
 })
 
 router.post('/createGroup', auth, async (req, res) => {
@@ -35,10 +33,14 @@ router.post('/createGroup', auth, async (req, res) => {
     }
 })
 
-router.get('/:otherId', auth, async (req, res) => {
+router.get('/login', (req, res) => {
+    res.render('login');
+});
+router.get('/chat/:otherId', auth, async (req, res) => {
     let userId = req.user._id;
     const user = await User.findOne({ _id: userId });
     let otherId = req.params.otherId;
+    const selectedUser = await User.findOne({ _id: otherId });
     const liveMessages = await Message.find({
         $or: [
             { sender: userId, receiver: otherId },
@@ -57,22 +59,21 @@ router.get('/:otherId', auth, async (req, res) => {
         .populate('sender', 'username')
         .sort({ createdAt: -1 });
 
-   
-    let messages = [...liveMessages, ...archivedMessages];
 
+    let messages = [...liveMessages, ...archivedMessages];
+    const group = await Group.find();
 
     messages.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    const Users = await User.find({ _id: { $ne: req.user._id } });
+    const Users = await User.find({ _id: { $ne: userId } });
 
-    res.render('chat', { messages, userId: req.user._id, users: Users, user });
+
+    res.render('index', { messages, userId: req.user._id, users: Users, user, group ,selectedUser});
 
 
 
 })
-router.get('/login', (req, res) => {
-    res.render('login');
-});
+
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.get('/forgot', (req, res) => {

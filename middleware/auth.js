@@ -13,7 +13,7 @@ const auth = async (req, res, next) => {
         if (!token) {
             console.log('No token provided');
             return res.redirect('/login');
-            return res.status(401).json({ error: 'Access denied. No token provided.' });
+
         }
         const decoded = jwt.verify(token, 'Abhi');
         req.user = await User.findById(decoded.id);
@@ -21,7 +21,7 @@ const auth = async (req, res, next) => {
     } catch (error) {
         console.error('Invalid token');
         return res.redirect('/login');
-        
+
     }
 };
 
