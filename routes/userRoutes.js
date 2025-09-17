@@ -9,7 +9,6 @@ const Archieve = require('../model/archieve');
 
 
 router.get('/', auth, async (req, res) => {
-    console.log(req.user);
     const Users = await User.find({ _id: { $ne: req.user._id } });
     const group = await Group.find();
     res.render('index', { userId: req.user._id, users: Users, group, messages: [], user: req.user, selectedUser: null });
@@ -45,25 +44,53 @@ router.get('/chat/:otherId', auth, async (req, res) => {
     let userId = req.user._id;
     const user = await User.findOne({ _id: userId });
     let otherId = req.params.otherId;
-    const selectedUser = await User.findOne({ _id: otherId });
-    const liveMessages = await Message.find({
-        $or: [
-            { sender: userId, receiver: otherId },
-            { sender: otherId, receiver: userId }
-        ]
-    })
-        .populate('sender', 'username')
-        .sort({ createdAt: -1 });
 
-    const archivedMessages = await Archieve.find({
-        $or: [
-            { sender: userId, receiver: otherId },
-            { sender: otherId, receiver: userId }
-        ]
-    })
-        .populate('sender', 'username')
-        .sort({ createdAt: -1 });
+    // Try to find user by ID
+    let selectedUser = await User.findOne({ _id: otherId });
+    let isGroup = false;
 
+    // If not found, try to find group by ID
+    if (!selectedUser) {
+        selectedUser = await Group.findById(otherId);
+        if (selectedUser) {
+            isGroup = true;
+        }
+    }
+
+    let liveMessages = [], archivedMessages = [];
+
+    if (isGroup) {
+        const isMember = await Group.findOne({ _id: otherId, members: userId });
+        // For group chat, find messages where receiver is the group
+        if (isMember) {
+            liveMessages = await Message.find({ groupId: otherId   })
+                .populate('sender', 'username')
+                .sort({ createdAt: -1 });
+            archivedMessages = await Archieve.find({ groupId: otherId })
+                .populate('sender', 'username')
+                .sort({ createdAt: -1 });
+        }
+
+    } else {
+        // For user chat, find messages between two users
+        liveMessages = await Message.find({
+            $or: [
+                { sender: userId, receiver: otherId },
+                { sender: otherId, receiver: userId }
+            ]
+        })
+            .populate('sender', 'username')
+            .sort({ createdAt: -1 });
+
+        archivedMessages = await Archieve.find({
+            $or: [
+                { sender: userId, receiver: otherId },
+                { sender: otherId, receiver: userId }
+            ]
+        })
+            .populate('sender', 'username')
+            .sort({ createdAt: -1 });
+    }
 
     let messages = [...liveMessages, ...archivedMessages];
     const group = await Group.find();
@@ -72,12 +99,8 @@ router.get('/chat/:otherId', auth, async (req, res) => {
 
     const Users = await User.find({ _id: { $ne: userId } });
 
-
-    res.render('index', { messages, userId: req.user._id, users: Users, user, group, selectedUser });
-
-
-
-})
+    res.render('index', { messages, userId: req.user._id, users: Users, user, group, selectedUser, isGroup });
+});
 
 router.post('/register', registerUser);
 router.post('/login', loginUser);
@@ -96,4 +119,24 @@ router.get('/messages', auth, async (req, res) => {
     }
 });
 
+router.get('/group', auth, async (req, res) => {
+    res.render('group');
+});
+router.post('/groups/create', auth, async (req, res) => {
+    try {
+        const { name, members } = req.body; // members = [userId1, userId2,...]
+        const userId = req.user._id; // assuming JWT middleware adds user
+
+        const group = await Group.create({
+            username: name,
+            members: [userId, ...(members || [])],
+            createdBy: userId
+        });
+        console.log(group);
+
+        res.status(201).json(group);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 module.exports = router;

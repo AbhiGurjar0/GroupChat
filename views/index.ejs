@@ -34,7 +34,7 @@
                         <% group.forEach((grp)=> {%>
                             <li onclick="selectGroup(this,'<%= grp._id %>',2)"
                                 class="p-3 hover:bg-gray-100 cursor-pointer border-b ">
-                                <%=grp.name%>
+                                <%=grp.username%>
                             </li>
                             <%});%>
 
@@ -47,8 +47,9 @@
     <main class="flex-1 flex flex-col">
         <%if(selectedUser){%>
             <div id="RoomName" class="p-4 border-b bg-white shadow-sm font-semibold"
-                other_user_id="<%=selectedUser._id%>" chatType="Private">
+                other_user_id="<%=selectedUser._id%>" chatType="<%= isGroup ? 'Group' : 'Private' %>">
                 <%= selectedUser.username %>
+
             </div>
             <%}else{%>
                 <div id="RoomName" class="p-4 border-b bg-white shadow-sm font-semibold" other_user_id="" chatType="">
@@ -103,14 +104,41 @@
                 token: userId
             }
         });
-        socket.on("connect", () => console.log("Connected:", socket.id));
+        socket.on("connect", () => {
+            if (groupId) {
+                socket.emit("joinGroup", { userId, groupId });
+            }
+            if (otherId) {
+                socket.emit("joinRoom", { userId, otherId });
+            }
+        });
 
 
         socket.on("chatMessage", (msg) => {
             console.log(msg);
             console.log("message is here")
-           const isSender = msg.sender._id !== userId;
-           console.log(isSender)
+            const isSender = msg.sender._id !== userId;
+            console.log(isSender)
+
+            messagesDiv.innerHTML += `
+            <div class="flex mb-2 ${isSender ? 'justify-start' : 'justify-end'} p-2">
+                <div
+                    class="${isSender ? 'bg-orange-400 text-white' : 'bg-green-400 text-black'} px-4 py-2 rounded-xl max-w-md">
+                    <p>
+                        ${msg.message}
+                    </p>
+
+                </div>
+            </div>`;
+
+            messagesDiv.scrollBottom = messagesDiv.scrollHeight;
+        });
+
+        socket.on("groupMessage", (msg) => {
+            console.log(msg);
+            console.log("message is here")
+            const isSender = msg.sender._id !== userId;
+            console.log(isSender)
 
             messagesDiv.innerHTML += `
             <div class="flex mb-2 ${isSender ? 'justify-start' : 'justify-end'} p-2">
@@ -131,21 +159,23 @@
             if (!text) return;
             let chatType = document.getElementById("RoomName").getAttribute('chatType');
             console.log({ text, chatType })
-            // if (chatType === "Private") {
-            socket.emit("chatMessage", {
-                message: text,
-                sender: userId,
-                receiver: otherId
-            });
-            // } else if (chatType === "Group") {
-            //     console.log(otherId)
-            //     socket.emit("groupMessage", {
+            console.log(otherId)
+            if (chatType == "Private") {
+                socket.emit("chatMessage", {
+                    message: text,
+                    sender: userId,
+                    receiver: otherId
+                });
+            } else if (chatType == "Group") {
+                console.log(otherId)
+                socket.emit("groupMessage", {
 
-            //         message: text,
-            //         sender: userId,
-            //         groupId: otherId
-            //     });
-            // }
+                    message: text,
+                    sender: userId,
+                    groupId: otherId
+                });
+                console.log("Group message sent");
+            }
 
             input.value = "";
 
@@ -160,18 +190,11 @@
 
 
         function selectGroup(element, id) {
-
-            otherId = id;
             groupId = id;
-            document.getElementById("RoomName").innerText = element ? element.innerText : "None";
-            document.getElementById("RoomName").setAttribute("other_user_id", id);
-            document.getElementById("RoomName").setAttribute('chatType', "Group");
-            messagesDiv.innerHTML = '';
-            // console.log({ userId, otherId });
             socket.emit('joinGroup', { userId, groupId });
+            window.location.href = `/chat/${id}`;
         }
     </script>
-
 
 </body>
 

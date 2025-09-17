@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Group</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-lg">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Create a Group</h2>
+
+
+
+        <!-- Group Name -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Group Name</label>
+            <input type="text" id="groupName"
+                class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none"
+                placeholder="Enter group name">
+        </div>
+
+        <!-- Members List -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Members</label>
+            <div id="membersContainer"></div>
+            <button id="addMemberBtn"
+                class="mt-2 px-4 py-2 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition">
+                + Add Member
+            </button>
+        </div>
+
+        <!-- Submit -->
+        <button id="createGroupBtn"
+            class="w-full py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition">
+            Create Group
+        </button>
+    </div>
+
+
+    <script>
+        const membersContainer = document.getElementById("membersContainer");
+        const addMemberBtn = document.getElementById("addMemberBtn");
+        const createGroupBtn = document.getElementById("createGroupBtn");
+
+        // Add new member input
+        addMemberBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+
+            const div = document.createElement("div");
+            div.className = "flex items-center mb-2";
+
+            div.innerHTML = `
+        <input type="text" 
+          placeholder="Enter member email or userId" 
+          class="flex-1 px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none"/>
+        <button class="ml-2 text-red-500 hover:text-red-700">&times;</button>
+      `;
+
+            // Remove input
+            div.querySelector("button").addEventListener("click", () => {
+                div.remove();
+            });
+
+            membersContainer.appendChild(div);
+        });
+
+        // Handle form submit
+        createGroupBtn.addEventListener("click", () => {
+            console.log("Creating group...");
+            const groupName = document.getElementById("groupName").value;
+            const memberInputs = membersContainer.querySelectorAll("input");
+            const members = Array.from(memberInputs).map(input => input.value).filter(Boolean);
+
+            if (!groupName) {
+                alert("Please enter a group name");
+                return;
+            }
+
+            console.log("Creating group:", { groupName, members });
+
+            // Example POST request
+            fetch("/groups/create", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ name: groupName, members })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    alert("Group created successfully!");
+                    console.log(data);
+                })
+                .catch(err => {
+                    alert("Error creating group");
+                    console.error(err);
+                });
+        });
+    </script>
+
+</body>
+
+</html>

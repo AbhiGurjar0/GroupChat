@@ -15,6 +15,7 @@ const Message = require('./model/message')
 const Archieve = require('./model/archieve');
 const { CronJob } = require('cron');
 const User = require('./model/user');
+const Group = require('./model/group');
 
 const job = new CronJob(
     '0 0 23 * * *', // every day at 11 PM
@@ -79,9 +80,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('chatMessage', async (msg) => {
-        console.log(msg);
+
         const roomId = [msg.sender, msg.receiver].sort().join('_');
-        console.log(msg.sender + " " + msg.receiver);
+
         await Message.create({
             message: msg.message,
             sender: msg.sender,
@@ -94,9 +95,9 @@ io.on('connection', (socket) => {
             sender,           // now sender is { _id, username }
             receiver: msg.receiver
         };
-        io.emit('chatMessage', newMessage);
+        io.to(roomId).emit('chatMessage', newMessage);
 
-        
+
     });
 
     // Group Chat
@@ -105,18 +106,26 @@ io.on('connection', (socket) => {
         socket.join(groupId);
         console.log(`User ${userId} joined group ${groupId}`);
     });
+    socket.on("groupMessage", async ({ sender, groupId, message }) => {
+        const senderUser = await User.findById(sender).select("_id username");
 
-    socket.on('groupMessage', async (msg) => {
 
-        const { sender, groupId, message } = msg;
-        await Message.create({
+        // Security: ensure sender is a member
+        const group = await Group.findById(groupId);
+        if (!group || !group.members.includes(sender)) {
+            return; // ignore invalid senders
+        }
+
+        let mes = await Message.create({ message, sender, groupId, type: "group" });
+        console.log(mes);
+        // Emit to everyone in that group room
+        io.to(groupId).emit("groupMessage", {
             message,
-            sender,
-            groupId,
-            type: "group"
+            sender: senderUser,
+            groupId
         });
-        io.to(groupId).emit('chatMessage', msg);
     });
+
 });
 io.on("connection_error", (err) => {
     console.error("Socket connection error:", err.message);
