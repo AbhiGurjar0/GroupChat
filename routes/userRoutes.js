@@ -11,7 +11,7 @@ const Archieve = require('../model/archieve');
 router.get('/', auth, async (req, res) => {
     const Users = await User.find({ _id: { $ne: req.user._id } });
     const group = await Group.find();
-    res.render('index', { userId: req.user._id, users: Users, group, messages: [], user: req.user, selectedUser: null });
+    res.render('index', { userId: req.user._id, users: Users, group, messages: [], user: req.user, selectedUser: null, isGroup: false });
 })
 router.get('/logout', auth, (req, res) => {
     res.clearCookie('token');
@@ -63,7 +63,7 @@ router.get('/chat/:otherId', auth, async (req, res) => {
         const isMember = await Group.findOne({ _id: otherId, members: userId });
         // For group chat, find messages where receiver is the group
         if (isMember) {
-            liveMessages = await Message.find({ groupId: otherId   })
+            liveMessages = await Message.find({ groupId: otherId })
                 .populate('sender', 'username')
                 .sort({ createdAt: -1 });
             archivedMessages = await Archieve.find({ groupId: otherId })
@@ -104,6 +104,10 @@ router.get('/chat/:otherId', auth, async (req, res) => {
 
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+router.post('/logout', (req, res) => {
+    res.clearCookie('token');
+    res.redirect('/login');
+});
 router.get('/forgot', (req, res) => {
     res.render('forgot');
 })
@@ -139,4 +143,31 @@ router.post('/groups/create', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+router.post('/addMemberToGroup', auth, async (req, res) => {
+    try {
+        const { groupId } = req.body;
+        console.log(groupId);
+        // const { memberId } = req.body; // ID of the user to add
+        const userId = req.user._id
+        console.log(userId);
+
+        const group = await Group.findById(groupId);
+        console.log(group);
+        if (!group) {
+            return res.status(404).json({ error: 'Group not found' });
+        }
+        if (group.members.includes(userId)) {
+            return res.status(403).json({ error: 'User is not a member of this group' });
+
+        }
+        console.log("done")
+
+        group.members.push(userId);
+        await group.save();
+        res.status(200).json({ message: 'Member added successfully', group });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

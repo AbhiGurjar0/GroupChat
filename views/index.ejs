@@ -21,25 +21,39 @@
             </svg>
             Groups
         </div>
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto flex flex-col">
             <ul>
-                <% users.forEach((user)=> {%>
-
+                <% users.forEach((user)=> { %>
                     <li onclick="selectUser(this,'<%= user._id %>')"
-                        class="p-3 hover:bg-gray-100 cursor-pointer border-b">
-                        <%=user.username%>
+                        class="p-3 hover:bg-blue-100 cursor-pointer border-b flex items-center transition-colors duration-150">
+                        <span class="text-gray-700 font-medium"><%= user.username %></span>
                     </li>
-
-                    <%});%>
-                        <% group.forEach((grp)=> {%>
-                            <li onclick="selectGroup(this,'<%= grp._id %>',2)"
-                                class="p-3 hover:bg-gray-100 cursor-pointer border-b ">
-                                <%=grp.username%>
-                            </li>
-                            <%});%>
-
-
+                <% }); %>
+                <% group.forEach((grp)=> { %>
+                    <div class="border-t mt-2 flex items-center justify-between pr-4">
+                        <li onclick="selectGroup(this,'<%= grp._id %>',2)"
+                            class="p-3 hover:bg-green-100 cursor-pointer border-b flex-1 rounded-l-lg flex items-center transition-colors duration-150">
+                            <span class="text-green-700 font-semibold"><%= grp.username %></span>
+                        </li>
+                        <button onclick="addMemberToGroup('<%= grp._id %>')"
+                            class="ml-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-full w-8 h-8 flex items-center justify-center shadow transition-colors duration-150"
+                            title="Add member to group">+</button>
+                    </div>
+                <% }); %>
             </ul>
+            <div class="mt-4 flex flex-col gap-2 px-4">
+                <a href="/group">
+                    <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg shadow transition-colors duration-150">
+                        Add Group
+                    </button>
+                </a>
+                <form action="/logout" method="POST">
+                    <button type="submit"
+                        class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-lg shadow transition-colors duration-150">
+                        Logout
+                    </button>
+                </form>
+            </div>
         </div>
     </aside>
 
@@ -64,15 +78,18 @@
                         class="flex-1 px-8 py-6 min-h-[75vh] overflow-y-auto box-border space-y-8 bg-gray-50">
 
                         <% messages.reverse().forEach(message=> {
-                            const isSender = message.sender._id.equals(selectedUser?._id); // current user is sender
+                            const isSender = !(message.sender._id.toString() === userId.toString());
+                            console.log(isSender);
                             %>
                             <div class="flex mb-2 <%= isSender ? 'justify-start' : 'justify-end' %> p-2">
                                 <div
                                     class="<%= isSender ? 'bg-orange-400 text-white':'bg-green-400 text-black' %> px-4 py-2 rounded-xl max-w-md">
-                                    <p>
-                                        <%= message.message%>
+                                    <p class="font-semibold text-sm mb-1">
+                                        <%= message.sender.username %>
                                     </p>
-
+                                    <p class="text-base leading-relaxed break-words">
+                                        <%= message.message %>
+                                    </p>
                                 </div>
                             </div>
                             <% }) %>
@@ -99,31 +116,37 @@
         const messagesDiv = document.getElementById("chatContainer");
         const userId = "<%= userId %>";
         let otherId = document.getElementById("RoomName").getAttribute("other_user_id");
+        document.addEventListener("DOMContentLoaded", () => {
+            let groupId = "<%= isGroup ? selectedUser?._id : '' %>";
+            if (groupId) {
+                socket.emit('joinGroup', { userId, groupId });
+            }
+            else {
+                socket.emit('joinRoom', { userId, otherId });
+            }
+
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
         const socket = io({
             auth: {
                 token: userId
             }
         });
-        socket.on("connect", () => {
-            if (groupId) {
-                socket.emit("joinGroup", { userId, groupId });
-            }
-            if (otherId) {
-                socket.emit("joinRoom", { userId, otherId });
-            }
-        });
+
 
 
         socket.on("chatMessage", (msg) => {
             console.log(msg);
             console.log("message is here")
             const isSender = msg.sender._id !== userId;
-            console.log(isSender)
 
             messagesDiv.innerHTML += `
             <div class="flex mb-2 ${isSender ? 'justify-start' : 'justify-end'} p-2">
                 <div
                     class="${isSender ? 'bg-orange-400 text-white' : 'bg-green-400 text-black'} px-4 py-2 rounded-xl max-w-md">
+                    <p>
+                        ${msg.sender.username}
+                    </p>
                     <p>
                         ${msg.message}
                     </p>
@@ -144,6 +167,9 @@
             <div class="flex mb-2 ${isSender ? 'justify-start' : 'justify-end'} p-2">
                 <div
                     class="${isSender ? 'bg-orange-400 text-white' : 'bg-green-400 text-black'} px-4 py-2 rounded-xl max-w-md">
+                    <p>
+                        ${msg.sender.username}
+                    </p>
                     <p>
                         ${msg.message}
                     </p>
@@ -193,6 +219,24 @@
             groupId = id;
             socket.emit('joinGroup', { userId, groupId });
             window.location.href = `/chat/${id}`;
+        }
+        async function addMemberToGroup(id) {
+            fetch('/addMemberToGroup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ groupId: id })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    alert("Member added to group");
+                } else {
+                    alert("Error adding member to group");
+                }
+            }).catch(err => {
+                console.log(err);
+                alert("Error adding member to group");
+            });
         }
     </script>
 
