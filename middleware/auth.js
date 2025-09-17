@@ -16,7 +16,9 @@ const auth = async (req, res, next) => {
 
         }
         const decoded = jwt.verify(token, 'Abhi');
+        console.log(decoded);
         req.user = await User.findById(decoded.id);
+        console.log(req.user);
         next();
     } catch (error) {
         console.error('Invalid token');

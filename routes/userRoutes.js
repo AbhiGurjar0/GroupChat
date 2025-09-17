@@ -9,10 +9,15 @@ const Archieve = require('../model/archieve');
 
 
 router.get('/', auth, async (req, res) => {
+    console.log(req.user);
     const Users = await User.find({ _id: { $ne: req.user._id } });
     const group = await Group.find();
-    res.render('index', { userId: req.user._id, users: Users, group, messages: [], user: req.user ,selectedUser:null});
+    res.render('index', { userId: req.user._id, users: Users, group, messages: [], user: req.user, selectedUser: null });
 })
+router.get('/logout', auth, (req, res) => {
+    res.clearCookie('token');
+    res.redirect('/login');
+});
 
 router.post('/createGroup', auth, async (req, res) => {
     try {
@@ -68,7 +73,7 @@ router.get('/chat/:otherId', auth, async (req, res) => {
     const Users = await User.find({ _id: { $ne: userId } });
 
 
-    res.render('index', { messages, userId: req.user._id, users: Users, user, group ,selectedUser});
+    res.render('index', { messages, userId: req.user._id, users: Users, user, group, selectedUser });
 
 
 
