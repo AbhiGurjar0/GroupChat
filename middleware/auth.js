@@ -6,6 +6,7 @@ const User = require('../model/user');
 
 const auth = async (req, res, next) => {
     const token = req.cookies.token;
+    
 
 
 
@@ -18,7 +19,7 @@ const auth = async (req, res, next) => {
         const decoded = jwt.verify(token, 'Abhi');
        
         req.user = await User.findById(decoded.id);
-        
+        // console.log(req.user);
         next();
     } catch (error) {
         console.error('Invalid token');

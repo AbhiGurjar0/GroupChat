@@ -9,6 +9,10 @@ const Archieve = require('../model/archieve');
 
 
 router.get('/', auth, async (req, res) => {
+    // console.log(req.user)
+    if (!req.user) {
+        return res.render('login');
+    }
     const Users = await User.find({ _id: { $ne: req.user._id } });
     const group = await Group.find();
     res.render('index', { userId: req.user._id, users: Users, group, messages: [], user: req.user, selectedUser: null, isGroup: false });
@@ -45,11 +49,11 @@ router.get('/chat/:otherId', auth, async (req, res) => {
     const user = await User.findOne({ _id: userId });
     let otherId = req.params.otherId;
 
-    // Try to find user by ID
+
     let selectedUser = await User.findOne({ _id: otherId });
     let isGroup = false;
 
-    // If not found, try to find group by ID
+
     if (!selectedUser) {
         selectedUser = await Group.findById(otherId);
         if (selectedUser) {
@@ -61,7 +65,7 @@ router.get('/chat/:otherId', auth, async (req, res) => {
 
     if (isGroup) {
         const isMember = await Group.findOne({ _id: otherId, members: userId });
-        // For group chat, find messages where receiver is the group
+
         if (isMember) {
             liveMessages = await Message.find({ groupId: otherId })
                 .populate('sender', 'username')
@@ -72,7 +76,7 @@ router.get('/chat/:otherId', auth, async (req, res) => {
         }
 
     } else {
-        // For user chat, find messages between two users
+
         liveMessages = await Message.find({
             $or: [
                 { sender: userId, receiver: otherId },
@@ -128,8 +132,8 @@ router.get('/group', auth, async (req, res) => {
 });
 router.post('/groups/create', auth, async (req, res) => {
     try {
-        const { name, members } = req.body; // members = [userId1, userId2,...]
-        const userId = req.user._id; // assuming JWT middleware adds user
+        const { name, members } = req.body;
+        const userId = req.user._id;
 
         const group = await Group.create({
             username: name,
@@ -147,7 +151,7 @@ router.post('/addMemberToGroup', auth, async (req, res) => {
     try {
         const { groupId } = req.body;
         console.log(groupId);
-        // const { memberId } = req.body; // ID of the user to add
+
         const userId = req.user._id
         console.log(userId);
 

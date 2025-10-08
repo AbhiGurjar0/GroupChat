@@ -80,25 +80,36 @@ io.on('connection', (socket) => {
     });
 
     socket.on('chatMessage', async (msg) => {
+        console.log("Received:", msg.file);  
+        // const roomId = [msg.sender, msg.receiver].sort().join('_');
 
-        const roomId = [msg.sender, msg.receiver].sort().join('_');
-
-        await Message.create({
-            message: msg.message,
+        // Save message to DB
+        console.log(msg.file)
+        const savedMsg = await Message.create({
+            message: msg.file ||msg.message,
+            file: msg.file || null,       // new field for file data / URL
+            fileName: msg.fileName || null,
             sender: msg.sender,
             receiver: msg.receiver,
-            type: "private"
+            type: msg.type || "private"
         });
+
         const sender = await User.findById(msg.sender).select('_id username');
+
         const newMessage = {
-            message: msg.message,
-            sender,           // now sender is { _id, username }
-            receiver: msg.receiver
+            _id: savedMsg._id,
+            message: savedMsg.message,
+            file: savedMsg.file,
+            fileName: savedMsg.fileName,
+            type: savedMsg.type,
+            sender,
+            receiver: msg.receiver,
+            createdAt: savedMsg.createdAt
         };
+
         io.to(roomId).emit('chatMessage', newMessage);
-
-
     });
+
 
     // Group Chat
     socket.on("joinGroup", (data) => {
@@ -106,25 +117,40 @@ io.on('connection', (socket) => {
         socket.join(groupId);
         console.log(`User ${userId} joined group ${groupId}`);
     });
-    socket.on("groupMessage", async ({ sender, groupId, message }) => {
+    socket.on("groupMessage", async (msg) => {
+        const { sender, groupId, message, file, fileName, type } = msg;
+
         const senderUser = await User.findById(sender).select("_id username");
 
-
-        // Security: ensure sender is a member
+        // Security check: sender must be in group
         const group = await Group.findById(groupId);
         if (!group || !group.members.includes(sender)) {
             return; // ignore invalid senders
         }
 
-        let mes = await Message.create({ message, sender, groupId, type: "group" });
-        console.log(mes);
-        // Emit to everyone in that group room
+        // Save to DB
+        const savedMsg = await Message.create({
+            message: message || null,
+            file: file || null,
+            fileName: fileName || null,
+            sender,
+            groupId,
+            type: type || "group"
+        });
+
+        // Emit to everyone in group
         io.to(groupId).emit("groupMessage", {
-            message,
+            _id: savedMsg._id,
+            message: savedMsg.message,
+            file: savedMsg.file,
+            fileName: savedMsg.fileName,
+            type: savedMsg.type,
             sender: senderUser,
-            groupId
+            groupId,
+            createdAt: savedMsg.createdAt
         });
     });
+
 
 });
 io.on("connection_error", (err) => {
