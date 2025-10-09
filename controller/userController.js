@@ -20,14 +20,14 @@ const loginUser = async (req, res) => {
     res.redirect('/');
 };
 const registerUser = async (req, res) => {
-    const { userName, email, password } = req.body;
+    const { userName, email, password,phone } = req.body;
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ error: 'Email already in use' });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({ username: userName, email, password: hashedPassword });
+        const newUser = new User({ username: userName, email, password: hashedPassword ,phone});
         await newUser.save();
         res.redirect('/login');
     } catch (error) {
