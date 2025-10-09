@@ -87,6 +87,7 @@ io.on("connection", (socket) => {
     console.log("Received:", msg);
     const roomId = [msg.sender, msg.receiver].sort().join("_");
     let fileUrl = null;
+    let mediaType = null;
     if (msg.file) {
       const result = await cloudinary.uploader.upload(msg.file, {
         folder: "chat_media", // optional folder in Cloudinary
@@ -139,23 +140,33 @@ io.on("connection", (socket) => {
     if (!group || !group.members.includes(sender)) {
       return; // ignore invalid senders
     }
+    let fileUrl = null;
+    let mediaType = null;
+    if (msg.file) {
+      const result = await cloudinary.uploader.upload(msg.file, {
+        folder: "chat_media", // optional folder in Cloudinary
+        resource_type: "auto", // auto-detect image/video/etc
+      });
+      fileUrl = result.secure_url;
+      mediaType = result.resource_type;
+    }
 
     // Save to DB
     const savedMsg = await Message.create({
-      message: message || null,
-      file: file || null,
-      fileName: fileName || null,
+      message: msg.message || null,
+      mediaUrl: fileUrl,
+      mediaType: mediaType,
       sender,
       groupId,
-      type: type || "group",
+      type: msg.type || "group",
     });
 
     // Emit to everyone in group
     io.to(groupId).emit("groupMessage", {
       _id: savedMsg._id,
       message: savedMsg.message,
-      file: savedMsg.file,
-      fileName: savedMsg.fileName,
+      file: savedMsg.mediaUrl,
+      mediaType: mediaType,
       type: savedMsg.type,
       sender: senderUser,
       groupId,
